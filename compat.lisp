@@ -96,14 +96,14 @@ are discarded \(that is, the body is an implicit PROGN)."
   "Returns the peer address and port of the socket SOCKET as two
 values.  The address is returned as a string in dotted IP address
 notation."
-  (values (usocket:vector-quad-to-dotted-quad (usocket:get-peer-address socket))
-          (usocket:get-peer-port socket)))
+  (values (sockets:address-to-string (sockets:remote-host socket))
+          (sockets:remote-port socket)))
+
 
 (defun make-socket-stream (socket acceptor)
   "Returns a stream for the socket SOCKET.  The ACCEPTOR argument is
 ignored."
-  (declare (ignore acceptor))
-  (usocket:socket-stream socket))
+  (declare (ignore acceptor)) socket)
 
 (defun make-lock (name)
   "Simple wrapper to allow LispWorks and Bordeaux Threads to coexist."

@@ -328,11 +328,11 @@ is set up via PROCESS-REQUEST."
 (defun client-as-string (socket)
   "A helper function which returns the client's address and port as a
    string and tries to act robustly in the presence of network problems."
-  (let ((address (usocket:get-peer-address socket))
-        (port (usocket:get-peer-port socket)))
+  (let ((address (sockets:remote-host socket))
+        (port (sockets:remote-port socket)))
     (when (and address port)
       (format nil "~A:~A"
-              (usocket:vector-quad-to-dotted-quad address)
+	      (sockets:address-to-string address)
               port))))
 
 #-:lispworks

@@ -52,7 +52,7 @@ for diagnostic output.")
                :md5
                :rfc2388
                :trivial-backtrace
-               #-:lispworks :usocket
+               #-:lispworks :iolib
                #-:lispworks :bordeaux-threads)
   :components ((:module url-rewrite
                 :serial t
@@ -76,7 +76,7 @@ for diagnostic output.")
                (:file "misc")
                (:file "easy-handlers")
                (:file "headers")
-               (:file "set-timeouts")
+;               (:file "set-timeouts")
                (:file "taskmaster")
                (:file "acceptor")
                #-:hunchentoot-no-ssl (:file "ssl")))

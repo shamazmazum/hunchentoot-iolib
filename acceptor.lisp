@@ -54,6 +54,10 @@ connections to all IP addresses on the machine. This is the default.")
 This name can be utilized when defining \"easy handlers\" - see
 DEFINE-EASY-HANDLER.  The default name is an uninterned symbol as
 returned by GENSYM.")
+   #-:lispworks
+   (force-ipv6 :initarg :force-ipv6
+	       :accessor acceptor-force-ipv6
+	       :documentation "Force ipv6 using")
    (request-class :initarg :request-class
                   :accessor acceptor-request-class
                   :documentation "Determines which class of request
@@ -165,9 +169,10 @@ stream or to NIL to suppress logging.")
 files that are served by the acceptor if no more specific
 acceptor-dispatch-request method handles the request."))
   (:default-initargs
-   :address nil
+   :address "127.0.0.1"
    :port 80
    :name (gensym)
+   :force-ipv6 nil
    :request-class 'request
    :reply-class 'reply
    :listen-backlog 50
@@ -281,10 +286,10 @@ they're using secure connections - see the SSL-ACCEPTOR class."))
       (when (plusp (accessor-requests-in-progress acceptor))
         (condition-variable-wait (acceptor-shutdown-queue acceptor) 
                                  (acceptor-shutdown-lock acceptor)))))
-  (#+:lispworks close
-   #-:lispworks usocket:socket-close
-   (acceptor-listen-socket acceptor))
-  (setf (acceptor-listen-socket acceptor) nil)
+  (with-accessors ((socket acceptor-listen-socket)) acceptor
+		  #-:lispworks (sockets:shutdown socket :read t :write t)
+		  (close socket)
+		  (setf socket nil))
   acceptor)
 
 (defmethod initialize-connection-stream ((acceptor acceptor) stream)
@@ -461,32 +466,37 @@ catches during request processing."
 (defmethod start-listening ((acceptor acceptor))
   (when (acceptor-listen-socket acceptor)
     (hunchentoot-error "acceptor ~A is already listening" acceptor))
-  (setf (acceptor-listen-socket acceptor)
-        (usocket:socket-listen (or (acceptor-address acceptor)
-                                   usocket:*wildcard-host*)
-                               (acceptor-port acceptor)
-                               :reuseaddress t
-			       :backlog (acceptor-listen-backlog acceptor)
-                               :element-type '(unsigned-byte 8)))
+  
+  (let ((socket
+	 (sockets:make-socket :address-family :internet
+			      :type :stream
+			      :connect :passive
+			      :local-host (acceptor-address acceptor)
+			      :local-port (acceptor-port acceptor)
+			      :reuse-address t
+			      :ipv6 (or (is-ipv6-needed (acceptor-address acceptor))
+					(acceptor-force-ipv6 acceptor)))))
+    (sockets:listen-on socket)
+    (setf (acceptor-listen-socket acceptor) socket))
   (values))
 
 #-:lispworks
-(defmethod accept-connections ((acceptor acceptor))
-  (usocket:with-server-socket (listener (acceptor-listen-socket acceptor))
+(defmethod accept-connections ((acceptor acceptor)) ;; FIXME: What is with-server-socket ?
+  (let ((listener (acceptor-listen-socket acceptor)))
     (loop
      (when (acceptor-shutdown-p acceptor)
        (return))
-     (when (usocket:wait-for-input listener :ready-only t :timeout +new-connection-wait-time+)
-       (when-let (client-connection
-                  (handler-case (usocket:socket-accept listener)                               
-                    ;; ignore condition
-                    (usocket:connection-aborted-error ())))
-         (set-timeouts client-connection
-                       (acceptor-read-timeout acceptor)
-                       (acceptor-write-timeout acceptor))
-         (handle-incoming-connection (acceptor-taskmaster acceptor)
-                                     client-connection))))))
-
+     (when
+	 (when-let (client-connection
+;		(handler-case
+		    (sockets:accept-connection listener :wait t :timeout +new-connection-wait-time+))
+		   ;; ignore condition
+;			      (usocket:connection-aborted-error ())))
+;	       (set-timeouts client-connection
+;			     (acceptor-read-timeout acceptor)
+;			     (acceptor-write-timeout acceptor))
+		   (handle-incoming-connection (acceptor-taskmaster acceptor)
+					       client-connection))))))
 ;; LispWorks implementation
 
 #+:lispworks
