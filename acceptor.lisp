@@ -486,17 +486,16 @@ catches during request processing."
     (loop
      (when (acceptor-shutdown-p acceptor)
        (return))
-     (when
-	 (when-let (client-connection
+     (when-let (client-connection
 ;		(handler-case
-		    (sockets:accept-connection listener :wait t :timeout +new-connection-wait-time+))
+		(sockets:accept-connection listener :wait t :timeout +new-connection-wait-time+))
 		   ;; ignore condition
 ;			      (usocket:connection-aborted-error ())))
 ;	       (set-timeouts client-connection
 ;			     (acceptor-read-timeout acceptor)
 ;			     (acceptor-write-timeout acceptor))
-		   (handle-incoming-connection (acceptor-taskmaster acceptor)
-					       client-connection))))))
+	       (handle-incoming-connection (acceptor-taskmaster acceptor)
+					   client-connection)))))
 ;; LispWorks implementation
 
 #+:lispworks
