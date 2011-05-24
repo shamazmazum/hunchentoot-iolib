@@ -488,7 +488,7 @@ catches during request processing."
        (return))
      (when-let (client-connection
 ;		(handler-case
-		(sockets:accept-connection listener :wait t :timeout +new-connection-wait-time+))
+		(sockets:accept-connection listener :wait +new-connection-wait-time+))
 		   ;; ignore condition
 ;			      (usocket:connection-aborted-error ())))
 ;	       (set-timeouts client-connection
