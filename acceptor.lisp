@@ -165,7 +165,7 @@ stream or to NIL to suppress logging.")
 files that are served by the acceptor if no more specific
 acceptor-dispatch-request method handles the request."))
   (:default-initargs
-   :address +ipv6-uspecified+
+   :address sockets:+ipv6-unspecified+
    :port 80
    :name (gensym)
    :request-class 'request
