@@ -330,3 +330,13 @@ not a chunked stream."
 ;  `(usocket:with-mapped-conditions ()
 ;    ,@body))
   )
+
+(defun is-ipv6-needed (address)
+  (let (res)
+    (if (and (typep address 'string)
+	     (find #\: address))
+	(setq res t))
+    (if (and (typep address 'vector)
+	     (= (length address) 8))
+		(setq res t))
+    res))
