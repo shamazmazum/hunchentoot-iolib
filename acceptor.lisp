@@ -55,9 +55,9 @@ This name can be utilized when defining \"easy handlers\" - see
 DEFINE-EASY-HANDLER.  The default name is an uninterned symbol as
 returned by GENSYM.")
    #-:lispworks
-   (force-ipv6 :initarg :force-ipv6
-	       :accessor acceptor-force-ipv6
-	       :documentation "Force ipv6 using")
+   (ipv6 :initarg :ipv6
+	 :accessor acceptor-ipv6
+	 :documentation "Turn on ipv6 using")
    (request-class :initarg :request-class
                   :accessor acceptor-request-class
                   :documentation "Determines which class of request
@@ -169,10 +169,9 @@ stream or to NIL to suppress logging.")
 files that are served by the acceptor if no more specific
 acceptor-dispatch-request method handles the request."))
   (:default-initargs
-   :address "127.0.0.1"
    :port 80
    :name (gensym)
-   :force-ipv6 nil
+   :ipv6 nil
    :request-class 'request
    :reply-class 'reply
    :listen-backlog 50
@@ -197,6 +196,15 @@ detail in the docstrings of the slot definitions for this class.
 Unless you are in a Lisp without MP capabilities, you can have several
 active instances of ACCEPTOR \(listening on different ports) at the
 same time."))
+
+(defmethod initialize-instance :after ((acceptor acceptor) &rest initargs)
+  (if (and (find :address initargs)
+	   (not (find :ipv6 initargs))) (setf (acceptor-ipv6 acceptor)
+					     (is-ipv6-needed (getf initargs :address))))
+  (if (not (find :address initargs))
+      (setf (slot-value acceptor 'address) (if (getf initargs :ipv6)
+					       sockets:+ipv6-unspecified+
+					     sockets:+ipv4-unspecified+))))
 
 (defmethod print-object ((acceptor acceptor) stream)
   (print-unreadable-object (acceptor stream :type t)
@@ -474,8 +482,7 @@ catches during request processing."
 			      :local-host (acceptor-address acceptor)
 			      :local-port (acceptor-port acceptor)
 			      :reuse-address t
-			      :ipv6 (or (is-ipv6-needed (acceptor-address acceptor))
-					(acceptor-force-ipv6 acceptor)))))
+			      :ipv6 (acceptor-ipv6 acceptor))))
     (sockets:listen-on socket)
     (setf (acceptor-listen-socket acceptor) socket))
   (values))
