@@ -222,7 +222,7 @@ not want to wait for another request any longer."
       (let ((*current-error-message* "While reading initial request line:"))
         (with-mapped-conditions ()
           (read-line* stream)))
-    (end-of-file ())))
+    ((or end-of-file #-:lispworks sockets:socket-connection-timeout-error) ())))
 
 (defun send-bad-request-response (stream)
   "Send a ``Bad Request'' response to the client."

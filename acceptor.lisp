@@ -494,13 +494,15 @@ catches during request processing."
      (when (acceptor-shutdown-p acceptor)
        (return))
      (when-let (client-connection
-;		(handler-case
-		(sockets:accept-connection listener :wait +new-connection-wait-time+))
-		   ;; ignore condition
-;			      (usocket:connection-aborted-error ())))
-;	       (set-timeouts client-connection
-;			     (acceptor-read-timeout acceptor)
-;			     (acceptor-write-timeout acceptor))
+		(handler-case
+		 (sockets:accept-connection listener :wait +new-connection-wait-time+)
+			      (socket-connection-aborted-error ())))
+
+	       (setf (sockets:socket-option client-connection :receive-timeout)
+		     (acceptor-read-timeout acceptor))
+	       (setf (sockets:socket-option client-connection :send-timeout)
+		     (acceptor-write-timeout acceptor))
+
 	       (handle-incoming-connection (acceptor-taskmaster acceptor)
 					   client-connection)))))
 ;; LispWorks implementation
