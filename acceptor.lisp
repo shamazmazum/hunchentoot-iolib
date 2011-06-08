@@ -332,8 +332,7 @@ they're using secure connections - see the SSL-ACCEPTOR class."))
                   (lambda (cond)
                     (log-message* *lisp-warnings-log-level*
                                   "Warning while processing connection: ~A" cond))))
-    (with-mapped-conditions ()
-      (call-next-method))))
+		(call-next-method)))
 
 (defun do-with-acceptor-request-count-incremented (*acceptor* function)
   (with-lock-held ((acceptor-shutdown-lock *acceptor*))

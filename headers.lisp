@@ -220,8 +220,7 @@ connection timeout established by Hunchentoot has expired and we do
 not want to wait for another request any longer."
   (handler-case
       (let ((*current-error-message* "While reading initial request line:"))
-        (with-mapped-conditions ()
-          (read-line* stream)))
+	(read-line* stream))
     ((or end-of-file #-:lispworks sockets:socket-connection-timeout-error) ())))
 
 (defun send-bad-request-response (stream)
