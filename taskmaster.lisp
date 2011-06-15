@@ -122,11 +122,57 @@ PROCESS-CONNECTION."))
 
 (defmethod execute-acceptor ((taskmaster single-threaded-taskmaster))
   ;; in a single-threaded environment we just call ACCEPT-CONNECTIONS
-  (accept-connections (taskmaster-acceptor taskmaster)))
+  (accept-connections-loop (taskmaster-acceptor taskmaster)))
 
 (defmethod handle-incoming-connection ((taskmaster single-threaded-taskmaster) socket)
   ;; in a single-threaded environment we just call PROCESS-CONNECTION
   (process-connection (taskmaster-acceptor taskmaster) socket))
+
+
+; New event-based taskmaster
+#-:lispworks
+(defclass event-based-taskmaster (taskmaster)
+  ((acceptor-process
+    :accessor acceptor-process)
+   ;; Support for bounding the number of threads we'll create
+   (max-accept-count
+    :type integer
+    :initarg :max-accept-count
+    :initform 0
+    :accessor taskmaster-max-accept-count
+    :documentation "0 is unlimited")
+   (event-base
+    :accessor taskmaster-event-base)))
+
+#-:lispworks
+(defmethod shutdown ((taskmaster event-based-taskmaster))
+  (iomux:exit-event-loop (taskmaster-event-base taskmaster))
+  taskmaster)
+
+#-:lispworks
+(defmethod execute-acceptor ((taskmaster event-based-taskmaster))
+  (setf (taskmaster-event-base taskmaster) (make-instance 'iomux:event-base))
+  (setf (acceptor-process taskmaster)
+	(bt:make-thread
+	 #'(lambda ()
+	     (iomux:set-io-handler (taskmaster-event-base taskmaster)
+				   (sockets:socket-os-fd
+				    (acceptor-listen-socket
+				     (taskmaster-acceptor taskmaster)))
+				   :read #'(lambda (fd event error-p)
+					     (declare (ignore fd event))
+					     (if (not error-p)
+						 (accept-connections (taskmaster-acceptor taskmaster)))))
+	     (iomux:event-dispatch (taskmaster-event-base taskmaster)))
+	 :name (format nil "hunchentoot-listener-~A:~A"
+		       (or (acceptor-address (taskmaster-acceptor taskmaster)) "*")
+		       (acceptor-port (taskmaster-acceptor taskmaster))))))
+
+#-:lispworks
+(defmethod handle-incoming-connection ((taskmaster event-based-taskmaster) socket)
+  ;; Will be non-blocking later
+  (process-connection (taskmaster-acceptor taskmaster) socket))
+
 
 (defvar *default-max-thread-count* 100)
 (defvar *default-max-accept-count* (+ *default-max-thread-count* 20))
@@ -280,7 +326,7 @@ implementations."))
   (setf (acceptor-process taskmaster)
         (bt:make-thread
          (lambda ()
-           (accept-connections (taskmaster-acceptor taskmaster)))
+           (accept-connections-loop (taskmaster-acceptor taskmaster)))
          :name (format nil "hunchentoot-listener-~A:~A"
                        (or (acceptor-address (taskmaster-acceptor taskmaster)) "*")
                        (acceptor-port (taskmaster-acceptor taskmaster))))))
@@ -368,7 +414,7 @@ is set up via PROCESS-REQUEST."
 
 #+:lispworks
 (defmethod execute-acceptor ((taskmaster one-thread-per-connection-taskmaster))
-  (accept-connections (taskmaster-acceptor taskmaster)))
+  (accept-connections-loop (taskmaster-acceptor taskmaster)))
 
 #+:lispworks
 (defmethod handle-incoming-connection ((taskmaster one-thread-per-connection-taskmaster) socket)

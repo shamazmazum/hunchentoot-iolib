@@ -486,24 +486,27 @@ catches during request processing."
     (setf (acceptor-listen-socket acceptor) socket))
   (values))
 
+(defun accept-connections-loop (acceptor)
+  (loop
+   (when (acceptor-shutdown-p acceptor)
+     (return))
+   (accept-connections acceptor)))
+
 #-:lispworks
-(defmethod accept-connections ((acceptor acceptor)) ;; FIXME: What is with-server-socket ?
+(defmethod accept-connections ((acceptor acceptor))
   (let ((listener (acceptor-listen-socket acceptor)))
-    (loop
-     (when (acceptor-shutdown-p acceptor)
-       (return))
-     (when-let (client-connection
-		(handler-case
-		 (sockets:accept-connection listener :wait +new-connection-wait-time+)
-			      (socket-connection-aborted-error ())))
+    (when-let (client-connection
+	       (handler-case
+		    (sockets:accept-connection listener :wait +new-connection-wait-time+)
+		(socket-connection-aborted-error ())))
 
-	       (setf (sockets:socket-option client-connection :receive-timeout)
-		     (acceptor-read-timeout acceptor))
-	       (setf (sockets:socket-option client-connection :send-timeout)
-		     (acceptor-write-timeout acceptor))
-
-	       (handle-incoming-connection (acceptor-taskmaster acceptor)
-					   client-connection)))))
+	      (setf (sockets:socket-option client-connection :receive-timeout)
+		    (acceptor-read-timeout acceptor))
+	      (setf (sockets:socket-option client-connection :send-timeout)
+		    (acceptor-write-timeout acceptor))
+	      
+	      (handle-incoming-connection (acceptor-taskmaster acceptor)
+					  client-connection))))
 ;; LispWorks implementation
 
 #+:lispworks
