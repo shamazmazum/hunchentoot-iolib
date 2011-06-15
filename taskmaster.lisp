@@ -55,6 +55,9 @@ the acceptor instance.  The SOCKET argument is passed to
 PROCESS-CONNECTION as an argument."))
 
 (defgeneric shutdown (taskmaster)
+  (:documentation "Stops acception of new connections"))
+
+(defgeneric final-shutdown (taskmaster)
   (:documentation "Shuts down the taskmaster, i.e. frees all resources
 that were set up by it.  For example, a multi-threaded taskmaster
 might terminate all threads that are currently associated with it.
@@ -146,6 +149,12 @@ PROCESS-CONNECTION."))
 
 #-:lispworks
 (defmethod shutdown ((taskmaster event-based-taskmaster))
+  (iomux:remove-fd-handlers (taskmaster-event-base taskmaster)
+			    (sockets:socket-os-fd (acceptor-listen-socket
+						   (taskmaster-acceptor taskmaster)))))
+
+#-:lispworks
+(defmethod final-shutdown ((taskmaster event-based-taskmaster))
   (iomux:exit-event-loop (taskmaster-event-base taskmaster))
   taskmaster)
 
@@ -310,6 +319,9 @@ implementations."))
 
 #-:lispworks
 (defmethod shutdown ((taskmaster taskmaster))
+  taskmaster)
+
+(defmethod final-shutdown ((taskmaster taskmaster))
   taskmaster)
 
 #-:lispworks

@@ -294,6 +294,7 @@ they're using secure connections - see the SSL-ACCEPTOR class."))
       (when (plusp (accessor-requests-in-progress acceptor))
         (condition-variable-wait (acceptor-shutdown-queue acceptor) 
                                  (acceptor-shutdown-lock acceptor)))))
+  (final-shutdown (acceptor-taskmaster acceptor))
   (with-accessors ((socket acceptor-listen-socket)) acceptor
 		  #-:lispworks (sockets:shutdown socket :read t :write t)
 		  (close socket)
