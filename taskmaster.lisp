@@ -376,11 +376,24 @@ implementations."))
 (defun send-service-unavailable-reply (taskmaster socket)
   "A helper function to send out a quick error reply, before any state
 is set up via PROCESS-REQUEST."
-  (let ((acceptor (taskmaster-acceptor taskmaster)))
-    (send-response acceptor
-                   (initialize-connection-stream acceptor (make-socket-stream socket acceptor))
-                   +http-service-unavailable+
-                   :content (acceptor-status-message acceptor +http-service-unavailable+))))
+;  (let ((acceptor (taskmaster-acceptor taskmaster)))
+;    (send-response acceptor
+;                   (initialize-connection-stream acceptor (make-socket-stream socket acceptor))
+;                   +http-service-unavailable+
+;                   :content (acceptor-status-message acceptor +http-service-unavailable+))))
+  (format t "HERE~%")
+  (let ((crlf (format nil "~C~C" #\NewLine #\LineFeed)))
+    (write-sequence
+     (flex:string-to-octets
+      (with-output-to-string (out)
+			     (write-string "HTTP/1.0 503 Service Unavailable" out)
+			     (write-string crlf out)
+			     (write-string crlf out)
+			     (write-string "<html><head><title>Service Unavailable</title></head><body><h1>Service Unavailable</h1></body></html>" out)
+			     (write-string crlf out)))
+     socket))
+  (force-output socket)
+  (close socket))
 
 #-:lispworks
 (defun client-as-string (socket)
