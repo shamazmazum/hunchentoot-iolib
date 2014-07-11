@@ -217,8 +217,7 @@ doing."
           *headers-sent*
           (*request* request))
       (unwind-protect
-           (with-mapped-conditions ()
-             (labels
+	  (labels
                  ((report-error-to-client (error &optional backtrace)
                     (when *log-lisp-errors-p*
                       (log-message* *lisp-errors-log-level* "~A~@[~%~A~]" error (when *log-lisp-backtraces-p*
@@ -245,7 +244,7 @@ doing."
                                            body)))
                      (error (e)
                        ;; error occured while writing to the client.  attempt to report.
-                       (report-error-to-client e)))))))
+                       (report-error-to-client e))))))
         (dolist (path *tmp-files*)
           (when (and (pathnamep path) (probe-file path))
             ;; the handler may have chosen to (re)move the uploaded

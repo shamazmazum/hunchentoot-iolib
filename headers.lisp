@@ -220,9 +220,8 @@ connection timeout established by Hunchentoot has expired and we do
 not want to wait for another request any longer."
   (handler-case
       (let ((*current-error-message* "While reading initial request line:"))
-        (with-mapped-conditions ()
-          (read-line* stream)))
-    ((or end-of-file #-:lispworks usocket:timeout-error) ())))
+	(read-line* stream))
+    ((or end-of-file #-:lispworks sockets:socket-connection-timeout-error) ())))
 
 (defun send-bad-request-response (stream)
   "Send a ``Bad Request'' response to the client."
@@ -257,7 +256,7 @@ protocol of the request."
                       (format nil "HTTP/1.1 ~D ~A"
                               +http-continue+
                               (reason-phrase +http-continue+))))
-                 (write-sequence (map 'list #'char-code continue-line) stream)
+                 (write-sequence (map 'vector #'char-code continue-line) stream)
                  (write-sequence +crlf+ stream)
                  (write-sequence +crlf+ stream)
                  (force-output stream)
