@@ -167,7 +167,9 @@ via the file's suffix."
       (setf (content-type*) (or content-type
                                 (mime-type pathname)
                                 "application/octet-stream")
-            (header-out :content-range) (format nil "bytes 0-~D/*" (file-length file))
+            (header-out :content-range) (format nil "bytes 0-~D/~D"
+                                                (file-length file)
+                                                (file-length file))
             (header-out :last-modified) (rfc-1123-date time)
             bytes-to-send (maybe-handle-range-header file)
             (content-length*) bytes-to-send)
